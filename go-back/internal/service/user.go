@@ -15,6 +15,14 @@ func NewUserService(repo repository.UserRepository) UserService {
 	}
 }
 
+func (us UserService) ListAllUsers() ([]domain.User, error) {
+	users, err := us.userRepository.ListAllUsers()
+	if err != nil {
+		return []domain.User{}, err
+	}
+	return users, nil
+}
+
 func (us UserService) ListUserByUUID(userUUID string) (domain.User, error) {
 	user, err := us.userRepository.ListUserByUUID(userUUID)
 	if err != nil {

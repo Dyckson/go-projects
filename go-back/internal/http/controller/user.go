@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"database/sql"
 	"errors"
 	"go-back/internal/domain"
 	"go-back/internal/service"
@@ -18,6 +19,32 @@ type UserController struct {
 
 func NewUserController(s service.UserService) *UserController {
 	return &UserController{UserService: s}
+}
+
+func (uc *UserController) ListAllUsers(c *gin.Context) {
+	users, err := uc.UserService.ListAllUsers()
+	if err != nil {
+		log.Printf("controller=UserController func=ListUser err=%v", err)
+
+		status := http.StatusInternalServerError
+		message := "internal error"
+
+		if errors.Is(err, ErrNoRows) {
+			status = http.StatusNotFound
+			message = "no user found for this userUUID"
+		}
+
+		c.AbortWithStatusJSON(status, gin.H{
+			"success": false,
+			"message": message,
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"data":    users,
+	})
 }
 
 func (uc *UserController) ListUser(c *gin.Context) {
@@ -49,6 +76,15 @@ func (uc *UserController) ListUser(c *gin.Context) {
 }
 
 func (uc *UserController) UpdateUser(c *gin.Context) {
+	userUUID := c.Param("userUUID")
+	if userUUID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"message": "userUUID is required",
+		})
+		return
+	}
+
 	var previewUser domain.User
 
 	if err := c.ShouldBindJSON(&previewUser); err != nil {
@@ -58,6 +94,7 @@ func (uc *UserController) UpdateUser(c *gin.Context) {
 		})
 		return
 	}
+	previewUser.UUID = userUUID
 
 	currentUser, err := uc.UserService.ListUserByUUID(previewUser.UUID)
 	if err != nil {
@@ -104,7 +141,6 @@ func (uc *UserController) UpdateUser(c *gin.Context) {
 
 func (uc *UserController) CreateUser(c *gin.Context) {
 	var input domain.UserInput
-
 	if err := c.ShouldBindJSON(&input); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"success": false,
@@ -114,9 +150,29 @@ func (uc *UserController) CreateUser(c *gin.Context) {
 	}
 
 	user, err := uc.UserService.ListUserByEmail(input.Email)
-	unwrapped := errors.Unwrap(err)
+	if err != nil {
+		if !errors.Is(err, sql.ErrNoRows) {
+			log.Printf("controller=UserController func=CreateUser email=%s err=%v", input.Email, err)
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"success": false,
+				"message": "failed to check user",
+			})
+			return
+		}
+		user = domain.User{}
+	}
 
-	if err != nil && !errors.Is(unwrapped, ErrNoRows) {
+	if user.UUID != "" {
+		c.JSON(http.StatusConflict, gin.H{
+			"success": false,
+			"message": "user already exists",
+			"data":    user,
+		})
+		return
+	}
+
+	newUser, err := uc.UserService.CreateUser(input)
+	if err != nil {
 		log.Printf("controller=UserController func=CreateUser email=%s err=%v", input.Email, err)
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
 			"success": false,
@@ -125,22 +181,11 @@ func (uc *UserController) CreateUser(c *gin.Context) {
 		return
 	}
 
-	if user.UUID == "" {
-		user, err = uc.UserService.CreateUser(input)
-		if err != nil {
-			log.Printf("controller=UserController func=CreateUser email=%s err=%v", input.Email, err)
-			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
-				"success": false,
-				"message": "failed to create user",
-			})
-			return
-		}
-		c.JSON(http.StatusCreated, gin.H{
-			"success": true,
-			"message": "User created.",
-			"data":    user,
-		})
-	}
+	c.JSON(http.StatusCreated, gin.H{
+		"success": true,
+		"message": "user created",
+		"data":    newUser,
+	})
 }
 
 func (uc *UserController) DeleteUser(c *gin.Context) {

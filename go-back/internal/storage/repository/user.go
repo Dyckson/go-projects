@@ -8,6 +8,20 @@ import (
 
 type UserRepository struct{}
 
+func (u UserRepository) ListAllUsers() ([]domain.User, error) {
+	ctx := context.Background()
+	db := postgres.GetDB()
+	defer db.Close()
+
+	var users []domain.User
+	err := db.Query(ctx, &users, u.getAllUsersQuery())
+	if err != nil {
+		return nil, err
+	}
+
+	return users, nil
+}
+
 func (u UserRepository) ListUserByUUID(userUUID string) (domain.User, error) {
 	ctx := context.Background()
 	db := postgres.GetDB()
@@ -20,15 +34,6 @@ func (u UserRepository) ListUserByUUID(userUUID string) (domain.User, error) {
 	}
 
 	return user, nil
-}
-
-func (UserRepository) getUserByUUIDQuery() string {
-	return `
-		SELECT uuid, name, email, created_at, updated_at
-		FROM users
-		WHERE uuid = $1
-		LIMIT 1;
-	`
 }
 
 func (u UserRepository) ListUserByEmail(email string) (domain.User, error) {
@@ -72,16 +77,6 @@ func (u UserRepository) UpdateUser(user domain.User) (domain.User, error) {
 	return updatedUser, nil
 }
 
-func (UserRepository) updateUserQuery() string {
-	return `
-		UPDATE users
-		SET name = $1,
-			email = $2,
-			updated_at = NOW()
-		WHERE uuid = $3;
-	`
-}
-
 func (u UserRepository) CreateUser(user domain.UserInput) (domain.User, error) {
 	ctx := context.Background()
 	db := postgres.GetDB()
@@ -96,14 +91,6 @@ func (u UserRepository) CreateUser(user domain.UserInput) (domain.User, error) {
 	return createdUser, nil
 }
 
-func (UserRepository) createUserQuery() string {
-	return `
-		INSERT INTO users (name, email)
-		VALUES ($1, $2)
-		RETURNING uuid, name, email, created_at, updated_at;
-	`
-}
-
 func (u UserRepository) DeleteUser(userUUID string) error {
 	ctx := context.Background()
 	db := postgres.GetDB()
@@ -115,6 +102,40 @@ func (u UserRepository) DeleteUser(userUUID string) error {
 	}
 
 	return nil
+}
+
+func (UserRepository) getAllUsersQuery() string {
+	return `
+		SELECT uuid, name, email, created_at, updated_at
+		FROM users
+	`
+}
+
+func (UserRepository) getUserByUUIDQuery() string {
+	return `
+		SELECT uuid, name, email, created_at, updated_at
+		FROM users
+		WHERE uuid = $1
+		LIMIT 1;
+	`
+}
+
+func (UserRepository) createUserQuery() string {
+	return `
+		INSERT INTO users (name, email)
+		VALUES ($1, $2)
+		RETURNING uuid, name, email, created_at, updated_at;
+	`
+}
+
+func (UserRepository) updateUserQuery() string {
+	return `
+		UPDATE users
+		SET name = $1,
+			email = $2,
+			updated_at = NOW()
+		WHERE uuid = $3;
+	`
 }
 
 func (UserRepository) deleteUserQuery() string {
