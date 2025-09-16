@@ -86,7 +86,6 @@ func (uc *UserController) UpdateUser(c *gin.Context) {
 	}
 
 	var previewUser domain.User
-
 	if err := c.ShouldBindJSON(&previewUser); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"success": false,
@@ -99,15 +98,12 @@ func (uc *UserController) UpdateUser(c *gin.Context) {
 	currentUser, err := uc.UserService.ListUserByUUID(previewUser.UUID)
 	if err != nil {
 		log.Printf("controller=UserController func=UpdateUser userUUID=%s err=%v", previewUser.UUID, err)
-
 		status := http.StatusInternalServerError
 		message := "internal error"
-
 		if errors.Is(err, ErrNoRows) {
 			status = http.StatusNotFound
 			message = "no user found for this userUUID"
 		}
-
 		c.AbortWithStatusJSON(status, gin.H{
 			"success": false,
 			"message": message,
@@ -115,14 +111,28 @@ func (uc *UserController) UpdateUser(c *gin.Context) {
 		return
 	}
 
+	changed := false
+
 	if previewUser.Name != "" && previewUser.Name != currentUser.Name {
 		currentUser.Name = previewUser.Name
-	}
-	if previewUser.Email != "" && previewUser.Email != currentUser.Email {
-		currentUser.Email = previewUser.Email
+		changed = true
 	}
 
-	user, err := uc.UserService.UpdateUser(currentUser)
+	if previewUser.Email != "" && previewUser.Email != currentUser.Email {
+		currentUser.Email = previewUser.Email
+		changed = true
+	}
+
+	if !changed {
+		c.JSON(http.StatusOK, gin.H{
+			"success": true,
+			"message": "No changes detected.",
+			"data":    currentUser,
+		})
+		return
+	}
+
+	updatedUser, err := uc.UserService.UpdateUser(currentUser)
 	if err != nil {
 		log.Printf("controller=UserController func=UpdateUser userUUID=%s err=%v", previewUser.UUID, err)
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
@@ -135,7 +145,7 @@ func (uc *UserController) UpdateUser(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "User updated.",
-		"data":    user,
+		"data":    updatedUser,
 	})
 }
 
