@@ -15,7 +15,11 @@ func HandleRequests(router *gin.Engine) {
 	user := api.Group("/user")
 	user.GET("/list", userController.ListAllUsers)
 	user.GET("/list/:userUUID", userController.ListUser)
-	user.PUT("/edit/:userUUID", userController.UpdateUser)
-	user.PUT("/delete/:userUUID", userController.DeleteUser)
+
 	user.POST("/create", userController.CreateUser)
+
+	user.PUT("/edit/:userUUID", userController.UpdateUser)
+	user.PUT("/manage/:userUUID", userController.ManageActivateUser)
+
+	user.DELETE("/delete/:userUUID", userController.DeleteUser)
 }

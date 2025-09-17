@@ -149,6 +149,33 @@ func (uc *UserController) UpdateUser(c *gin.Context) {
 	})
 }
 
+func (uc *UserController) ManageActivateUser(c *gin.Context) {
+	userUUID := c.Param("userUUID")
+	if userUUID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"message": "userUUID is required",
+		})
+		return
+	}
+
+	user, err := uc.UserService.ManageActivateUser(userUUID)
+	if err != nil {
+		log.Printf("controller=UserController func=UpdateUser userUUID=%s err=%v", userUUID, err)
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"message": "failed to update user",
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"message": "User updated.",
+		"data":    user,
+	})
+}
+
 func (uc *UserController) CreateUser(c *gin.Context) {
 	var input domain.UserInput
 	if err := c.ShouldBindJSON(&input); err != nil {

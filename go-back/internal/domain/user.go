@@ -8,6 +8,7 @@ type User struct {
 	Email     string    `json:"email" ksql:"email"`
 	CreatedAt time.Time `json:"created_at" ksql:"created_at"`
 	UpdatedAt time.Time `json:"updated_at" ksql:"updated_at"`
+	IsActive  bool      `json:"is_active" ksql:"is_active"`
 }
 
 type UserInput struct {

@@ -47,6 +47,14 @@ func (us UserService) UpdateUser(user domain.User) (domain.User, error) {
 	return user, nil
 }
 
+func (us UserService) ManageActivateUser(userUUID string) (domain.User, error) {
+	user, err := us.userRepository.ManageActivateUser(userUUID)
+	if err != nil {
+		return domain.User{}, err
+	}
+	return user, nil
+}
+
 func (us UserService) CreateUser(user domain.UserInput) (domain.User, error) {
 	createdUser, err := us.userRepository.CreateUser(user)
 	if err != nil {

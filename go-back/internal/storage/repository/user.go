@@ -59,17 +59,28 @@ func (UserRepository) getUserByEmailQuery() string {
 	`
 }
 
+func (u UserRepository) ManageActivateUser(userUUID string) (domain.User, error) {
+	ctx := context.Background()
+	db := postgres.GetDB()
+	defer db.Close()
+
+	var updatedUser domain.User
+	err := db.QueryOne(ctx, &updatedUser, u.manageActivateUserQuery(), userUUID)
+	if err != nil {
+		return domain.User{}, err
+	}
+
+	return updatedUser, nil
+}
+
 func (u UserRepository) UpdateUser(user domain.User) (domain.User, error) {
 	ctx := context.Background()
 	db := postgres.GetDB()
 	defer db.Close()
 
-	_, err := db.Exec(ctx, u.updateUserQuery(), user.Name, user.Email, user.UUID)
-	if err != nil {
-		return domain.User{}, err
-	}
-
-	updatedUser, err := u.ListUserByUUID(user.UUID)
+	var updatedUser domain.User
+	err := db.QueryOne(ctx, &updatedUser, u.updateUserQuery(),
+		user.Name, user.Email, user.UUID)
 	if err != nil {
 		return domain.User{}, err
 	}
@@ -106,14 +117,14 @@ func (u UserRepository) DeleteUser(userUUID string) error {
 
 func (UserRepository) getAllUsersQuery() string {
 	return `
-		SELECT uuid, name, email, created_at, updated_at
+		SELECT uuid, name, email, created_at, updated_at, is_active
 		FROM users
 	`
 }
 
 func (UserRepository) getUserByUUIDQuery() string {
 	return `
-		SELECT uuid, name, email, created_at, updated_at
+		SELECT uuid, name, email, created_at, updated_at, is_active
 		FROM users
 		WHERE uuid = $1
 		LIMIT 1;
@@ -124,7 +135,7 @@ func (UserRepository) createUserQuery() string {
 	return `
 		INSERT INTO users (name, email)
 		VALUES ($1, $2)
-		RETURNING uuid, name, email, created_at, updated_at;
+		RETURNING uuid, name, email, created_at, updated_at, is_active;
 	`
 }
 
@@ -134,7 +145,18 @@ func (UserRepository) updateUserQuery() string {
 		SET name = $1,
 			email = $2,
 			updated_at = NOW()
-		WHERE uuid = $3;
+		WHERE uuid = $3
+		RETURNING uuid, name, email, created_at, updated_at, is_active;
+	`
+}
+
+func (UserRepository) manageActivateUserQuery() string {
+	return `
+		UPDATE users
+		SET is_active = NOT is_active,
+		    updated_at = NOW()
+		WHERE uuid = $1
+		RETURNING uuid, name, email, created_at, updated_at, is_active;
 	`
 }
 
