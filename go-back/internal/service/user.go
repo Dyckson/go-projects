@@ -2,14 +2,23 @@ package service
 
 import (
 	"go-back/internal/domain"
-	"go-back/internal/storage/repository"
 )
 
-type UserService struct {
-	userRepository repository.UserRepository
+type UserRepository interface {
+	ListAllUsers() ([]domain.User, error)
+	ListUserByUUID(string) (domain.User, error)
+	ListUserByEmail(string) (domain.User, error)
+	UpdateUser(domain.User) (domain.User, error)
+	ManageActivateUser(string) (domain.User, error)
+	CreateUser(domain.UserInput) (domain.User, error)
+	DeleteUser(string) error
 }
 
-func NewUserService(repo repository.UserRepository) UserService {
+type UserService struct {
+	userRepository UserRepository
+}
+
+func NewUserService(repo UserRepository) UserService {
 	return UserService{
 		userRepository: repo,
 	}

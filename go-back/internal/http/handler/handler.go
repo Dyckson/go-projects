@@ -2,6 +2,8 @@ package handler
 
 import (
 	"go-back/internal/http/controller"
+	"go-back/internal/service"
+	"go-back/internal/storage/repository"
 
 	"github.com/gin-gonic/gin"
 )
@@ -10,7 +12,9 @@ func HandleRequests(router *gin.Engine) {
 	api := router.Group("/api")
 	api.GET("/check", controller.HealthCheckStatus)
 
-	userController := &controller.UserController{}
+	repo := &repository.UserRepository{}
+	userService := service.NewUserService(repo)
+	userController := &controller.UserController{UserService: userService}
 
 	user := api.Group("/user")
 	user.GET("/list", userController.ListAllUsers)
