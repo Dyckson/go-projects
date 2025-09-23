@@ -9,8 +9,9 @@ import (
 )
 
 type MockUserRepository struct {
-	ListAllUsersFunc   func() ([]domain.User, error)
-	ListUserByUUIDFunc func(string) (domain.User, error)
+	ListAllUsersFunc    func() ([]domain.User, error)
+	ListUserByUUIDFunc  func(string) (domain.User, error)
+	ListUserByEmailFunc func(string) (domain.User, error)
 }
 
 func (m *MockUserRepository) ListAllUsers() ([]domain.User, error) {
@@ -23,7 +24,14 @@ func (m *MockUserRepository) ListUserByUUID(userUUID string) (domain.User, error
 	}
 	return domain.User{}, nil
 }
-func (m *MockUserRepository) ListUserByEmail(string) (domain.User, error) { return domain.User{}, nil }
+
+func (m *MockUserRepository) ListUserByEmail(email string) (domain.User, error) {
+	if m.ListUserByEmailFunc != nil {
+		return m.ListUserByEmailFunc(email)
+	}
+	return domain.User{}, nil
+}
+
 func (m *MockUserRepository) UpdateUser(domain.User) (domain.User, error) { return domain.User{}, nil }
 func (m *MockUserRepository) ManageActivateUser(string) (domain.User, error) {
 	return domain.User{}, nil
@@ -113,3 +121,40 @@ func TestUserService_ListUserByUUID(t *testing.T) {
 	})
 }
 
+func TestUserService_ListUserByEmail(t *testing.T) {
+	t.Run("returns user when repository succeeds", func(t *testing.T) {
+		mockUser := domain.User{UUID: "1", Name: "John", Email: "john@example.com"}
+		repo := &MockUserRepository{
+			ListUserByEmailFunc: func(email string) (domain.User, error) {
+				if email == "john@example.com" {
+					return mockUser, nil
+				}
+				return domain.User{}, errors.New("user not found")
+			},
+		}
+		service := UserService{userRepository: repo}
+		user, err := service.ListUserByEmail(mockUser.Email)
+		if err != nil {
+			t.Fatalf("expected no error, got %v", err)
+		}
+		if !reflect.DeepEqual(user, mockUser) {
+			t.Errorf("expected %v, got %v", mockUser, user)
+		}
+	})
+	t.Run("returns error when repository fails", func(t *testing.T) {
+		mockUser := domain.User{UUID: "1", Name: "John", Email: "john@example.com"}
+		repo := &MockUserRepository{
+			ListUserByEmailFunc: func(email string) (domain.User, error) {
+				return domain.User{}, errors.New("db error")
+			},
+		}
+		service := UserService{userRepository: repo}
+		user, err := service.ListUserByEmail(mockUser.Email)
+		if err == nil {
+			t.Fatal("expected error, got nil")
+		}
+		if (user != domain.User{}) {
+			t.Errorf("expected empty user, got %v", user)
+		}
+	})
+}
