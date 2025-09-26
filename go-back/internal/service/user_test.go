@@ -4,17 +4,21 @@ import (
 	"errors"
 	"reflect"
 	"testing"
+	"time"
 
 	"go-back/internal/domain"
 )
 
-var mockUser = domain.User{UUID: "1", Name: "John", Email: "john@example.com"}
+var mockUser = domain.User{UUID: "1", Name: "John", Email: "john@example.com", CreatedAt: time.Now(), UpdatedAt: time.Now(), IsActive: true}
 
 type MockUserRepository struct {
-	ListAllUsersFunc    func() ([]domain.User, error)
-	ListUserByUUIDFunc  func(string) (domain.User, error)
-	ListUserByEmailFunc func(string) (domain.User, error)
-	UpdateUserFunc      func(domain.User) (domain.User, error)
+	ListAllUsersFunc       func() ([]domain.User, error)
+	ListUserByUUIDFunc     func(string) (domain.User, error)
+	ListUserByEmailFunc    func(string) (domain.User, error)
+	UpdateUserFunc         func(domain.User) (domain.User, error)
+	ManageActivateUserFunc func(string) (domain.User, error)
+	CreateUserFunc         func(domain.UserInput) (domain.User, error)
+	DeleteUserFunc         func(string) error
 }
 
 func (m *MockUserRepository) ListAllUsers() ([]domain.User, error) {
@@ -34,20 +38,32 @@ func (m *MockUserRepository) ListUserByEmail(email string) (domain.User, error) 
 	}
 	return domain.User{}, nil
 }
-
 func (m *MockUserRepository) UpdateUser(u domain.User) (domain.User, error) {
 	if m.UpdateUserFunc != nil {
 		return m.UpdateUserFunc(u)
 	}
 	return domain.User{}, nil
 }
-func (m *MockUserRepository) ManageActivateUser(string) (domain.User, error) {
+
+func (m *MockUserRepository) ManageActivateUser(u string) (domain.User, error) {
+	if m.ManageActivateUserFunc != nil {
+		return m.ManageActivateUserFunc(u)
+	}
 	return domain.User{}, nil
 }
-func (m *MockUserRepository) CreateUser(domain.UserInput) (domain.User, error) {
+func (m *MockUserRepository) CreateUser(input domain.UserInput) (domain.User, error) {
+	if m.CreateUserFunc != nil {
+		return m.CreateUserFunc(input)
+	}
 	return domain.User{}, nil
 }
-func (m *MockUserRepository) DeleteUser(string) error { return nil }
+
+func (m *MockUserRepository) DeleteUser(uuid string) error {
+	if m.DeleteUserFunc != nil {
+		return m.DeleteUserFunc(uuid)
+	}
+	return nil
+}
 
 func TestNewUserService(t *testing.T) {
 	repo := &MockUserRepository{}
@@ -192,6 +208,106 @@ func TestUserService_UpdateUser(t *testing.T) {
 		}
 		if user != (domain.User{}) {
 			t.Errorf("expected empty user, got %v", user)
+		}
+	})
+}
+
+func TestUserService_ManageActivateUser(t *testing.T) {
+	t.Run("returns updated user when repository succeeds", func(t *testing.T) {
+		repo := &MockUserRepository{
+			ManageActivateUserFunc: func(u string) (domain.User, error) {
+				return mockUser, nil
+			},
+		}
+		service := UserService{userRepository: repo}
+		user, err := service.ManageActivateUser(mockUser.UUID)
+		if err != nil {
+			t.Fatalf("expected no error, got %v", err)
+		}
+		if !reflect.DeepEqual(user, mockUser) {
+			t.Errorf("expected %v, got %v", mockUser, user)
+		}
+	})
+	t.Run("returns error when repository fails", func(t *testing.T) {
+		repo := &MockUserRepository{
+			ManageActivateUserFunc: func(u string) (domain.User, error) {
+				return domain.User{}, errors.New("db error")
+			},
+		}
+		service := UserService{userRepository: repo}
+		user, err := service.ManageActivateUser(mockUser.UUID)
+		if err == nil {
+			t.Fatal("expected error, got nil")
+		}
+		if user != (domain.User{}) {
+			t.Errorf("expected empty user, got %v", user)
+		}
+	})
+}
+func TestUserService_CreateUser(t *testing.T) {
+	t.Run("returns created user when repository succeeds", func(t *testing.T) {
+		repo := &MockUserRepository{
+			CreateUserFunc: func(input domain.UserInput) (domain.User, error) {
+				return mockUser, nil
+			},
+		}
+		service := UserService{userRepository: repo}
+		createdUser, err := service.CreateUser(domain.UserInput{
+			Name:  "John",
+			Email: "john@example.com",
+		})
+		if err != nil {
+			t.Fatalf("expected no error, got %v", err)
+		}
+		if !reflect.DeepEqual(createdUser, mockUser) {
+			t.Errorf("expected %v, got %v", mockUser, createdUser)
+		}
+	})
+
+	t.Run("returns error when repository fails", func(t *testing.T) {
+		repo := &MockUserRepository{
+			CreateUserFunc: func(input domain.UserInput) (domain.User, error) {
+				return domain.User{}, errors.New("db error")
+			},
+		}
+		service := UserService{userRepository: repo}
+		createdUser, err := service.CreateUser(domain.UserInput{
+			Name:  "John",
+			Email: "john@example.com",
+		})
+		if err == nil {
+			t.Fatal("expected error, got nil")
+		}
+		if createdUser != (domain.User{}) {
+			t.Errorf("expected empty user, got %v", createdUser)
+		}
+	})
+}
+
+func TestUserService_DeleteUser(t *testing.T) {
+	t.Run("returns nil when repository succeeds", func(t *testing.T) {
+		repo := &MockUserRepository{
+			DeleteUserFunc: func(uuid string) error {
+				return nil
+			},
+		}
+		service := UserService{userRepository: repo}
+		err := service.DeleteUser(mockUser.UUID)
+		if err != nil {
+			t.Fatalf("expected no error, got %v", err)
+		}
+	})
+
+	t.Run("returns error when repository fails", func(t *testing.T) {
+		repo := &MockUserRepository{
+			DeleteUserFunc: func(uuid string) error {
+				return errors.New("db error")
+			},
+		}
+		service := UserService{userRepository: repo}
+		err := service.DeleteUser(mockUser.UUID)
+		if err == nil {
+			t.Fatal("expected error, got nil")
 		}
 	})
 }
