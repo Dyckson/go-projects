@@ -51,22 +51,25 @@ func (uc *UserController) ListUser(c *gin.Context) {
 	userUUID := c.Param("userUUID")
 
 	user, err := uc.UserService.ListUserByUUID(userUUID)
+
 	if err != nil {
-		log.Printf("controller=UserController func=ListUser userUUID=%s err=%v", userUUID, err)
+		if !errors.Is(err, sql.ErrNoRows) {
+			log.Printf("controller=UserController func=ListUser userUUID=%s err=%v", userUUID, err)
 
-		status := http.StatusInternalServerError
-		message := "internal error"
+			status := http.StatusInternalServerError
+			message := "internal error"
 
-		if errors.Is(err, ErrNoRows) {
-			status = http.StatusNotFound
-			message = "no user found for this userUUID"
+			if errors.Is(err, ErrNoRows) {
+				status = http.StatusNotFound
+				message = "no user found for this userUUID"
+			}
+
+			c.AbortWithStatusJSON(status, gin.H{
+				"success": false,
+				"message": message,
+			})
+			return
 		}
-
-		c.AbortWithStatusJSON(status, gin.H{
-			"success": false,
-			"message": message,
-		})
-		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{
