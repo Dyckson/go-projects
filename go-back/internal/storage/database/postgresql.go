@@ -10,7 +10,7 @@ import (
 )
 
 func GetDB() *ksql.DB {
-	dbConnect, err := kpgx.New(context.Background(), config.DbURI, ksql.Config{})
+	dbConnect, err := kpgx.New(context.Background(), config.DATABASE_URL, ksql.Config{})
 	if err != nil {
 		log.Panic(err)
 	}

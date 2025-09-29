@@ -2,4 +2,4 @@ package config
 
 import "os"
 
-var DbURI = os.Getenv("DATABASE_URL")
+var DATABASE_URL = os.Getenv("DATABASE_URL")
