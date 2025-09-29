@@ -1,5 +1,5 @@
 package config
 
-const (
-	DbURI = "host=localhost port=5432 user=postgres password=dddd dbname=postgres sslmode=disable"
-)
+import "os"
+
+var DbURI = os.Getenv("DATABASE_URL")
