@@ -1,14 +1,27 @@
-FROM golang:1.24.5
+# -------------------------
+# Build stage
+# -------------------------
+FROM golang:1.24.5 AS builder
 
-ARG GITHUB_TOKEN
+WORKDIR /app
 
-COPY ./ /go/src/go-back/
-WORKDIR /go/src/go-back/
+COPY go.mod go.sum ./
+RUN go mod download
 
-RUN go get ./
+COPY . .
 
-RUN go build -o main .
+RUN CGO_ENABLED=0 GOOS=linux go build -o main .
 
-CMD ["/go/src/go-back/main"]
+
+# -------------------------
+# Runtime stage
+# -------------------------
+FROM alpine:3.22
+
+WORKDIR /app
+
+COPY --from=builder /app/main .
 
 EXPOSE 1111
+
+CMD ["./main"]
