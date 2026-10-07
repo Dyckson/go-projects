@@ -1,4 +1,4 @@
-name: Docker Image CI
+name: Go CI
 
 on:
   push:
@@ -7,16 +7,59 @@ on:
     branches: ["main"]
 
 jobs:
-  build:
+
+  test:
+    name: Tests
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - name: Build the Docker image
-        run: docker build ./go-back --file ./go-back/Dockerfile
-
-      - name: Setup Go environment
+      - name: Setup Go
         uses: actions/setup-go@v7
         with:
           go-version-file: go-back/go.mod
+          cache-dependency-path: go-back/go.sum
+
+      - name: Run tests
+        working-directory: go-back
+        run: go test ./...
+
+
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v7
+        with:
+          go-version-file: go-back/go.mod
+          cache-dependency-path: go-back/go.sum
+
+      - name: Run go vet
+        working-directory: go-back
+        run: go vet ./...
+
+      - name: Run golangci-lint
+        uses: golangci/golangci-lint-action@v8
+        with:
+          version: latest
+          working-directory: go-back
+
+
+  docker:
+    name: Docker Build
+    runs-on: ubuntu-latest
+    needs: [test, lint]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build Docker image
+        run: docker build ./go-back --file ./go-back/Dockerfile

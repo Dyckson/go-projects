@@ -20,7 +20,11 @@ FROM alpine:3.24.2
 
 WORKDIR /app
 
+RUN adduser -D appuser
+
 COPY --from=builder /app/main .
+
+USER appuser
 
 EXPOSE 1111
 
