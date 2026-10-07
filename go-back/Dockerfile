@@ -1,7 +1,7 @@
 # -------------------------
 # Build stage
 # -------------------------
-FROM golang:1.24.5 AS builder
+FROM golang:1.27.1-alpine AS builder
 
 WORKDIR /app
 
@@ -16,7 +16,7 @@ RUN CGO_ENABLED=0 GOOS=linux go build -o main .
 # -------------------------
 # Runtime stage
 # -------------------------
-FROM alpine:3.22
+FROM alpine:3.24.2
 
 WORKDIR /app
 
