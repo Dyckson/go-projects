@@ -4,6 +4,7 @@ import (
 	"context"
 	"go-back/internal/domain"
 	postgres "go-back/internal/storage/database"
+	"log"
 )
 
 type UserRepository struct{}
@@ -11,7 +12,11 @@ type UserRepository struct{}
 func (u UserRepository) ListAllUsers() ([]domain.User, error) {
 	ctx := context.Background()
 	db := postgres.GetDB()
-	defer db.Close()
+	defer func() {
+		if err := db.Close(); err != nil {
+			log.Printf("erro ao fechar o banco de dados: %v", err)
+		}
+	}()
 
 	var users []domain.User
 	err := db.Query(ctx, &users, u.getAllUsersQuery())
@@ -25,7 +30,11 @@ func (u UserRepository) ListAllUsers() ([]domain.User, error) {
 func (u UserRepository) ListUserByUUID(userUUID string) (domain.User, error) {
 	ctx := context.Background()
 	db := postgres.GetDB()
-	defer db.Close()
+	defer func() {
+		if err := db.Close(); err != nil {
+			log.Printf("erro ao fechar o banco de dados: %v", err)
+		}
+	}()
 
 	var user domain.User
 	err := db.QueryOne(ctx, &user, u.getUserByUUIDQuery(), userUUID)
@@ -39,7 +48,11 @@ func (u UserRepository) ListUserByUUID(userUUID string) (domain.User, error) {
 func (u UserRepository) ListUserByEmail(email string) (domain.User, error) {
 	ctx := context.Background()
 	db := postgres.GetDB()
-	defer db.Close()
+	defer func() {
+		if err := db.Close(); err != nil {
+			log.Printf("erro ao fechar o banco de dados: %v", err)
+		}
+	}()
 
 	var user domain.User
 	err := db.QueryOne(ctx, &user, u.getUserByEmailQuery(), email)
@@ -62,7 +75,11 @@ func (UserRepository) getUserByEmailQuery() string {
 func (u UserRepository) ManageActivateUser(userUUID string) (domain.User, error) {
 	ctx := context.Background()
 	db := postgres.GetDB()
-	defer db.Close()
+	defer func() {
+		if err := db.Close(); err != nil {
+			log.Printf("erro ao fechar o banco de dados: %v", err)
+		}
+	}()
 
 	var updatedUser domain.User
 	err := db.QueryOne(ctx, &updatedUser, u.manageActivateUserQuery(), userUUID)
@@ -76,7 +93,11 @@ func (u UserRepository) ManageActivateUser(userUUID string) (domain.User, error)
 func (u UserRepository) UpdateUser(user domain.User) (domain.User, error) {
 	ctx := context.Background()
 	db := postgres.GetDB()
-	defer db.Close()
+	defer func() {
+		if err := db.Close(); err != nil {
+			log.Printf("erro ao fechar o banco de dados: %v", err)
+		}
+	}()
 
 	var updatedUser domain.User
 	err := db.QueryOne(ctx, &updatedUser, u.updateUserQuery(),
@@ -91,7 +112,11 @@ func (u UserRepository) UpdateUser(user domain.User) (domain.User, error) {
 func (u UserRepository) CreateUser(user domain.UserInput) (domain.User, error) {
 	ctx := context.Background()
 	db := postgres.GetDB()
-	defer db.Close()
+	defer func() {
+		if err := db.Close(); err != nil {
+			log.Printf("erro ao fechar o banco de dados: %v", err)
+		}
+	}()
 
 	var createdUser domain.User
 	err := db.QueryOne(ctx, &createdUser, u.createUserQuery(), user.Name, user.Email)
@@ -105,7 +130,11 @@ func (u UserRepository) CreateUser(user domain.UserInput) (domain.User, error) {
 func (u UserRepository) DeleteUser(userUUID string) error {
 	ctx := context.Background()
 	db := postgres.GetDB()
-	defer db.Close()
+	defer func() {
+		if err := db.Close(); err != nil {
+			log.Printf("erro ao fechar o banco de dados: %v", err)
+		}
+	}()
 
 	_, err := db.Exec(ctx, u.deleteUserQuery(), userUUID)
 	if err != nil {

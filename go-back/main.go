@@ -9,5 +9,8 @@ func main() {
 
 	r := router.NewRouter()
 	handler.HandleRequests(r)
-	r.Run(":1111")
+	err := r.Run(":1111")
+	if err != nil {
+		panic(err)
+	}
 }

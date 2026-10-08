@@ -14,7 +14,10 @@ func GetDB() *ksql.DB {
 	if err != nil {
 		log.Panic(err)
 	}
-	dbConnect.Exec(context.Background(), "set enable_seqscan = off;")
+	_, err = dbConnect.Exec(context.Background(), "set enable_seqscan = off;")
+	if err != nil {
+		log.Panic(err)
+	}
 
 	return &dbConnect
 }
